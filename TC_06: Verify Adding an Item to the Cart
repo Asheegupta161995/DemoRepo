@@ -1,0 +1,8 @@
+
+@Test
+public void testAddToCart() {
+    testValidLogin();
+    driver.findElement(By.cssSelector(".inventory_item button")).click();
+    WebElement cartBadge = driver.findElement(By.className("shopping_cart_badge"));
+    Assert.assertEquals(cartBadge.getText(), "1", "Item not added to cart");
+}
