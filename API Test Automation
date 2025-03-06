@@ -1,0 +1,86 @@
+import io.restassured.RestAssured;
+import io.restassured.response.Response;
+import io.restassured.specification.RequestSpecification;
+import org.testng.Assert;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+
+import static io.restassured.RestAssured.given;
+
+public class APITestSuite {
+    private String baseUrl = "https://www.saucedemo.com";
+    private String authToken;
+
+    @BeforeClass
+    public void setup() {
+        RestAssured.baseURI = baseUrl;
+        authToken = loginAndGetToken();
+    }
+
+    private String loginAndGetToken() {
+        RequestSpecification request = given()
+                .header("Content-Type", "application/json")
+                .body("{ \"username\": \"valid_user\", \"password\": \"valid_pass\" }");
+
+        Response response = request.post("/login");
+        Assert.assertEquals(response.getStatusCode(), 200);
+        return response.jsonPath().getString("token");
+    }
+
+    @Test(priority = 1)
+    public void testLoginAPI() {
+        Response response = given()
+                .header("Content-Type", "application/json")
+                .body("{ \"username\": \"valid_user\", \"password\": \"valid_pass\" }")
+                .post("/login");
+
+        Assert.assertEquals(response.getStatusCode(), 200);
+        Assert.assertNotNull(response.jsonPath().getString("token"));
+    }
+
+    @Test(priority = 2)
+    public void testProductListAPI() {
+        Response response = given()
+                .header("Authorization", "Bearer " + authToken)
+                .get("/products");
+
+        Assert.assertEquals(response.getStatusCode(), 200);
+        Assert.assertTrue(response.getBody().asString().contains("product"));
+    }
+
+    @Test(priority = 3)
+    public void testCheckoutAPI() {
+        Response response = given()
+                .header("Authorization", "Bearer " + authToken)
+                .header("Content-Type", "application/json")
+                .body("{ \"cart_id\": \"123\", \"payment_method\": \"credit_card\" }")
+                .post("/checkout");
+
+        Assert.assertEquals(response.getStatusCode(), 200);
+        Assert.assertTrue(response.getBody().asString().contains("success"));
+    }
+
+    @Test(priority = 4)
+    public void testAddToCartAPI() {
+        Response response = given()
+                .header("Authorization", "Bearer " + authToken)
+                .header("Content-Type", "application/json")
+                .body("{ \"product_id\": \"1\", \"quantity\": 1 }")
+                .post("/cart");
+
+        Assert.assertEquals(response.getStatusCode(), 200);
+        Assert.assertTrue(response.getBody().asString().contains("added"));
+    }
+
+    @Test(priority = 5)
+    public void testProductSortingAPI() {
+        Response response = given()
+                .header("Authorization", "Bearer " + authToken)
+                .queryParam("sort_by", "price")
+                .queryParam("order", "asc")
+                .get("/products/sort");
+
+        Assert.assertEquals(response.getStatusCode(), 200);
+        Assert.assertTrue(response.getBody().asString().contains("sorted"));
+    }
+}
